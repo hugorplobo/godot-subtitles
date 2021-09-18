@@ -1,15 +1,5 @@
 extends VideoPlayer
 
-class SubtitleNode:
-	var start : float
-	var end : float
-	var content : String
-	
-	func _init(start : float, end : float, content : String):
-		self.start = start
-		self.end = end
-		self.content = content
-
 export (String, FILE) var subtitle_path
 export (NodePath) var label_path
 
@@ -18,14 +8,14 @@ var subtitle_file : File
 var subtitle_content : PoolStringArray
 var parsed_subtitle : Array
 
-func _process(delta):
+func _process(delta) -> void:
 	if len(parsed_subtitle) < 1:
 		return
 	
-	if stream_position >= parsed_subtitle[0].start:
-		label.text = parsed_subtitle[0].content
+	if stream_position >= parsed_subtitle[0]["start"]:
+		label.text = parsed_subtitle[0]["content"]
 	
-	if stream_position >= parsed_subtitle[0].end:
+	if stream_position >= parsed_subtitle[0]["end"]:
 		label.text = ""
 		parsed_subtitle.pop_front()
 
@@ -38,13 +28,25 @@ func _ready() -> void:
 
 func parser() -> void:
 	for subtitle in subtitle_content:
-		var splitted_subttile = subtitle.split("\n")
-		var time_range = splitted_subttile[1].split(" --> ")
-		var content = splitted_subttile[2]
+		var splitted_subtitle = subtitle.split("\n")
+		var num_elements = 3
 		
-		parsed_subtitle.append(SubtitleNode.new(
-			parse_time(time_range[0]), parse_time(time_range[1]), content
-		))
+		if len(splitted_subtitle) > num_elements:
+			var new_splitted_subtitle = [splitted_subtitle[0], splitted_subtitle[1], ""]
+			
+			for i in range(num_elements - 1, len(splitted_subtitle)):
+				new_splitted_subtitle[-1] += "\n" + splitted_subtitle[i]
+			
+			splitted_subtitle = new_splitted_subtitle
+		
+		var time_range = splitted_subtitle[1].split(" --> ")
+		var content = splitted_subtitle[2]
+		
+		parsed_subtitle.append({
+			"start": parse_time(time_range[0]),
+			"end": parse_time(time_range[1]),
+			"content": content
+		})
 
 func parse_time(time : String) -> float:
 	var splitted_time = time.replace(",", ".").split(":")
